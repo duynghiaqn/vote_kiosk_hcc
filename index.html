@@ -1,25 +1,334 @@
-const SHEET_ID = ''; // Sheet ID
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <title>Đánh Giá Quầy phục vụ tại TTPVHCC</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/942/942751.png" type="image/png">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body {
+      padding: 20px;
+      padding-top: 50px;
+      padding-bottom: 80px; /* Tăng để tránh che bởi footer */
+      min-height: 100vh;     /* Đảm bảo chiếm đủ chiều cao thiết bị */
+      overflow-x: hidden;
+      overscroll-behavior: contain;
+    }
+    .container {
+      max-width: 100%;
+    }
+    #evaluationTitle {
+      font-size: 1.2rem;
+      text-align: center;
+    }
+    @media (min-width: 576px) { #evaluationTitle { font-size: 1.4rem; } }
+    @media (min-width: 768px) { #evaluationTitle { font-size: 1.6rem; } }
+    
+    .rating-button {
+      font-size: 1rem;
+      padding: 10px;
+      white-space: nowrap;
+    }
+    .rating-button.selected {
+      border-width: 2px;
+      font-weight: bold;
+      box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
 
-function doGet() {
-  return HtmlService.createHtmlOutputFromFile('index')
-    .setTitle("Hệ thống Đánh giá TTPVHCC") // tiêu đề hiển thị trên tab trình duyệt
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL); //  cho phép nhúng iframe nếu cần
-}
-// Lấy danh sách quầy + nhân viên + ảnh + lĩnh vực
-function getUnitStaffList() {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('CONFIG');
-  const data = sheet.getRange(2, 2, sheet.getLastRow() - 1, 4).getValues();
-  return data; // [ [quầy, tên nhân viên, ảnh, lĩnh vực], ... ]
+    .feedback-box {
+      display: none;
+      animation: fadeIn 0.3s ease-in-out;
+      margin-top: 15px;
+    }
+    .feedback-box.show {
+      display: block;
+    }
+    textarea.form-control {
+      font-size: 1rem;
+      resize: vertical;
+    }
+
+    #submitBtn {
+      min-width: 200px;
+      font-size: 1rem;
+    }
+
+    .rainbow-text strong {
+      font-weight: bold;
+      background: linear-gradient(270deg, #ff0000, #ff9900, #33cc33, #00ccff, #9933ff, #ff3399, #ff0000);
+      background-size: 400% 400%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: rainbowText 6s linear infinite;
+    }
+
+    @keyframes rainbowText {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    footer.fixed-bottom {
+      height: 38px;
+      line-height: 38px;
+    }
+    footer marquee {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: #fff;
+    }
+
+    .staff-info {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+  /*  .staff-photo {
+      width: 90px;
+      height: 90px;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 2px solid #007bff;
+    }*/
+    .staff-photo {
+  width: 90px;
+  height: 135px;
+  object-fit: cover;
+  border-radius: 8px; /* Bo góc nhẹ, hình vuông */
+  border: 2px solid #007bff;
+  }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+<header class="fixed-top bg-danger text-white text-center py-2 border-top">
+  <div class="d-flex align-items-center justify-content-center gap-2">
+    <img src="https://cdn.dnncloud.net/dvcqg/logo-hcc-w.png" alt="Logo" style="height: 30px; width: auto;">
+    <strong class="fs-6 fs-md-5">TRUNG TÂM PHỤC VỤ HÀNH CHÍNH CÔNG TỈNH BÌNH ĐỊNH</strong>
+  </div>
+</header>
+<div class="container">
+  <div class="text-center mb-3 py-5 rainbow-text">
+    <h2 id="evaluationTitle" class=" fw-bold fs-5 fs-md-4">
+  <strong>ĐÁNH GIÁ SỰ HÀI LÒNG TẠI TRUNG TÂM PHỤC VỤ HÀNH CHÍNH CÔNG</strong>
+</h2>
+  </div>
+  <div class="mb-3">
+    <label for="unitSelect" class="form-label">
+      Chọn Quầy: <span class="text-danger">(*)</span>
+    </label>
+    <select id="unitSelect" class="form-select">
+      <option selected disabled>-- Vui lòng chọn --</option>
+    </select>
+  </div>
+    <div id="staffInfo" class="staff-info justify-content-center mb-3">
+      <img id="staffImage" class="staff-photo" src="" alt="Ảnh nhân viên">
+      <div>
+        <div id="staffName" class="fw-semibold text-primary"></div>
+        <div id="unitName" class="text-danger fs-6"></div>
+        <div id="staffField" class="text-success fst-italic" style="font-size: 0.95rem;"></div>
+      </div>
+    </div>
+  <div class="mb-3">
+    <label class="form-label">Chọn đánh giá: <span class="text-danger">(*)</span></label>
+    <div class="row g-2">
+      <div class="col-12 col-md-4">
+        <button id="btn1" class="btn btn-outline-success rating-button w-100"
+                onclick="selectRating('Rất hài lòng', 'success')">
+          <i class="bi bi-emoji-smile"></i> Rất hài lòng
+        </button>
+      </div>
+      <div class="col-12 col-md-4">
+        <button id="btn2" class="btn btn-outline-primary rating-button w-100"
+                onclick="selectRating('Hài lòng', 'primary')">
+          <i class="bi bi-emoji-neutral"></i> Hài lòng
+        </button>
+      </div>
+      <div class="col-12 col-md-4">
+        <button id="btn3" class="btn btn-outline-danger rating-button w-100"
+                onclick="selectRating('Chưa hài lòng', 'danger')">
+          <i class="bi bi-emoji-frown"></i> Chưa hài lòng
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="feedbackBox" class="form-group feedback-box">
+    <label for="comment" class="form-label">Góp ý: <span class="text-danger">(*)</span></label>
+    <textarea id="comment" class="form-control" rows="3" placeholder="Nhập nội dung góp ý..."></textarea>
+  </div>
+
+  <div class="text-center mt-4">
+    <button id="submitBtn" class="btn btn-outline-secondary px-5" onclick="submitEvaluation()">
+      <i class="bi bi-send"></i> Gửi đánh giá
+    </button>
+  </div>
+</div>
+
+<footer class="fixed-bottom bg-danger text-white text-center py-2 border-top">
+  <div class="d-flex align-items-center justify-content-center" style="height: 30px;">
+    <marquee behavior="scroll" direction="left" scrollamount="5" style="width: 100%;">
+      <strong><span id="footerMessage">Đang tải dữ liệu...</span></strong>
+    </marquee>
+  </div>
+</footer>
+
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+  let selectedRating = '';
+  let selectedColor = '';
+  let unitStaffMap = {};
+
+  function showToast(type, message) {
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: type,
+      title: message,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    });
+  }
+
+  function loadStaffInfo() {
+  const unit = document.getElementById('unitSelect').value;
+  const staffInfo = document.getElementById('staffInfo');
+  const staffName = document.getElementById('staffName');
+  const staffImage = document.getElementById('staffImage');
+  const unitName = document.getElementById('unitName');
+
+  if (!unit || !staffData[unit]) {
+    // Ẩn nếu chưa chọn hoặc không có dữ liệu
+    staffInfo.classList.add('d-none');
+    staffName.textContent = '';
+    staffImage.src = '';
+    unitName.textContent = '';
+    return;
+  }
+
+  // Hiện thông tin nhân viên
+  const staff = staffData[unit];
+  staffName.textContent = staff.name;
+  staffImage.src = staff.photo;
+  unitName.textContent = unit; // hoặc dùng tên đầy đủ nếu có: staff.unitName
+  staffInfo.classList.remove('d-none');
 }
 
-// Ghi đánh giá vào sheet DATA
-function submitFeedback(unit, staff, rating, comment) {
-    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('DATA');
-  sheet.appendRow([new Date(), unit, staff, rating, comment]);
+  function loadUnits() {
+  google.script.run.withSuccessHandler(function(units) {
+    const select = document.getElementById('unitSelect');
+    select.innerHTML = '<option value="">-- Vui lòng chọn --</option>';
+    unitStaffMap = {};
+
+    units.forEach(([unit, staffName, staffPhoto, field]) => {
+      const option = document.createElement('option');
+      option.value = unit;
+      option.text = unit;
+      select.appendChild(option);
+
+      unitStaffMap[unit] = {
+        name: staffName,
+        photo: staffPhoto,
+        field: field
+      };
+    });
+
+    select.addEventListener('change', () => {
+      const selectedUnit = select.value;
+      const info = unitStaffMap[selectedUnit];
+
+      if (info) {
+        document.getElementById('staffInfo').style.display = 'flex';
+        document.getElementById('staffName').innerText = info.name;
+        document.getElementById('staffImage').src = info.photo;
+        document.getElementById('staffField').innerText = info.field || '';
+        document.getElementById('unitName').innerText = selectedUnit;
+      } else {
+        document.getElementById('staffInfo').style.display = 'none';
+      }
+    });
+  }).getUnitStaffList();
 }
 
-// Hiển thị thông điệp chạy dưới footer
-function getFooterMessage() {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('CONFIG');
-  return sheet.getRange("F2").getValue();
-}
+
+  function selectRating(rating, color) {
+    const unit = document.getElementById('unitSelect').value;
+    if (!unit) return showToast('warning', "Vui lòng chọn quầy phục vụ!");
+
+    selectedRating = rating;
+    selectedColor = color;
+
+    document.querySelectorAll('.rating-button').forEach(btn => btn.classList.remove('selected'));
+    if (rating === 'Rất hài lòng') document.getElementById('btn1').classList.add('selected');
+    else if (rating === 'Hài lòng') document.getElementById('btn2').classList.add('selected');
+    else document.getElementById('btn3').classList.add('selected');
+
+    document.getElementById('feedbackBox').style.display = (rating === 'Chưa hài lòng') ? 'block' : 'none';
+    document.getElementById('submitBtn').className = `btn btn-${color} px-5`;
+    document.getElementById('evaluationTitle').style.color = {
+      success: '#28a745', primary: '#007bff', danger: '#dc3545'
+    }[color] || '#000';
+    // Đổi màu tên nhân viên theo đánh giá
+  const staffName = document.getElementById('staffName');
+  staffName.classList.remove('text-success', 'text-primary', 'text-danger');
+  if (color === 'success') staffName.classList.add('text-success');
+  else if (color === 'primary') staffName.classList.add('text-primary');
+  else if (color === 'danger') staffName.classList.add('text-danger');
+  }
+  
+
+  function submitEvaluation() {
+    const unit = document.getElementById('unitSelect').value;
+    const comment = document.getElementById('comment').value;
+    const staff = unitStaffMap[unit] || { name: '', photo: '' };
+
+    if (!unit) return showToast('error', 'Vui lòng chọn quầy!');
+    if (!selectedRating) return showToast('error', 'Vui lòng chọn đánh giá!');
+    if (selectedRating === 'Chưa hài lòng' && comment.trim() === '')
+      return showToast('error', 'Vui lòng nhập góp ý!');
+
+    google.script.run.withSuccessHandler(() => {
+      Swal.fire({
+      title: 'Thành công!',
+      text: `Cảm ơn bạn đã đánh giá: ${selectedRating}`,
+      icon: 'success',
+      timer: 3000,
+      timerProgressBar: true,
+      showConfirmButton: false
+    });
+      document.getElementById('unitSelect').selectedIndex = 0;
+      document.getElementById('comment').value = '';
+      selectedRating = '';
+      selectedColor = '';
+      document.querySelectorAll('.rating-button').forEach(btn => btn.classList.remove('selected'));
+      document.getElementById('feedbackBox').style.display = 'none';
+      document.getElementById('submitBtn').className = 'btn btn-outline-secondary px-5';
+      document.getElementById('evaluationTitle').style.color = '#000';
+      document.getElementById('staffInfo').style.display = 'none';
+    }).submitFeedback(unit, staff.name, selectedRating, comment);
+  }
+
+  function loadFooterMessage() {
+    google.script.run.withSuccessHandler(function(message) {
+      document.getElementById('footerMessage').innerText = message || "Không có thông báo.";
+    }).getFooterMessage();
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    loadUnits();
+    loadFooterMessage();
+    setInterval(loadFooterMessage, 30000);
+  });
+</script>
+</body>
+</html>
