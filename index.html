@@ -80,29 +80,117 @@
       color: #fff;
     }
 
-    .staff-info {
-      display: none;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 15px;
-    }
-  /*  .staff-photo {
-      width: 90px;
-      height: 90px;
-      object-fit: cover;
-      border-radius: 50%;
-      border: 2px solid #007bff;
-    }*/
     .staff-photo {
-  width: 90px;
-  height: 135px;
-  object-fit: cover;
-  border-radius: 8px; /* Bo góc nhẹ, hình vuông */
-  border: 2px solid #007bff;
-  }
+      width: 90px;
+      height: 135px;
+      object-fit: cover;
+      border-radius: 8px; /* Bo góc nhẹ, hình vuông */
+      border: 2px solid #007bff;
+    }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Cardbox styles */
+    .quay-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .quay-card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.2s;
+      background: #fff;
+    }
+    .quay-card:hover {
+      transform: scale(1.05);
+    }
+    .quay-card.selected {
+      border: 2px solid #dc3545;
+    }
+    .quay-card img {
+      width: 90px;
+      height: 135px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 2px solid #007bff;
+    }
+    .quay-card .staff-name {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #007bff;
+      margin: 5px 0 5px;
+    }
+    .quay-card .unit-name {
+      font-size: 0.9rem;
+      color: #dc3545;
+    }
+    .quay-card .staff-field {
+      font-size: 0.85rem;
+      color: #28a745;
+      font-style: italic;
+    }
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .pagination button {
+      padding: 8px 16px;
+      border: 1px solid #ddd;
+      background: #fff;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      color: #dc3545;
+      display: flex;
+      align-items: center;
+      gap: 5px; /* Khoảng cách giữa icon và text */
+      transition: background-color 0.2s;
+    }
+    .pagination button:hover:not(:disabled) {
+      background: #f8d7da;
+    }
+    .pagination button:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+    .quay-loading {
+      display: none;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .quay-loading.show {
+      display: flex;
+    }
+    /* Progress Bar styles */
+    .satisfaction-progress {
+      margin: 5px 0;
+      height: 10px;
+      font-size: 0.75rem;
+    }
+    .progress-bar {
+      background-color: #28a745; /* Màu xanh lá cho hài lòng */
+    }
+    /* Responsive cho tablet */
+    @media (max-width: 1024px) {
+      .quay-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    /* Responsive cho mobile */
+    @media (max-width: 600px) {
+      .quay-grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -116,25 +204,19 @@
 <div class="container">
   <div class="text-center mb-3 py-5 rainbow-text">
     <h2 id="evaluationTitle" class=" fw-bold fs-5 fs-md-4">
-  <strong>ĐÁNH GIÁ SỰ HÀI LÒNG TẠI TRUNG TÂM PHỤC VỤ HÀNH CHÍNH CÔNG</strong>
-</h2>
+      <strong>ĐÁNH GIÁ SỰ HÀI LÒNG TẠI TRUNG TÂM PHỤC VỤ HÀNH CHÍNH CÔNG</strong>
+    </h2>
   </div>
   <div class="mb-3">
-    <label for="unitSelect" class="form-label">
-      Chọn Quầy: <span class="text-danger">(*)</span>
-    </label>
-    <select id="unitSelect" class="form-select">
-      <option selected disabled>-- Vui lòng chọn --</option>
-    </select>
-  </div>
-    <div id="staffInfo" class="staff-info justify-content-center mb-3">
-      <img id="staffImage" class="staff-photo" src="" alt="Ảnh nhân viên">
-      <div>
-        <div id="staffName" class="fw-semibold text-primary"></div>
-        <div id="unitName" class="text-danger fs-6"></div>
-        <div id="staffField" class="text-success fst-italic" style="font-size: 0.95rem;"></div>
+    <label class="form-label">Chọn Quầy: <span class="text-danger">(*)</span></label>
+    <div class="quay-loading" id="quayLoading">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Đang tải...</span>
       </div>
     </div>
+    <div class="quay-grid" id="quayGrid"></div>
+    <div class="pagination" id="pagination"></div>
+  </div>
   <div class="mb-3">
     <label class="form-label">Chọn đánh giá: <span class="text-danger">(*)</span></label>
     <div class="row g-2">
@@ -158,19 +240,16 @@
       </div>
     </div>
   </div>
-
   <div id="feedbackBox" class="form-group feedback-box">
     <label for="comment" class="form-label">Góp ý: <span class="text-danger">(*)</span></label>
     <textarea id="comment" class="form-control" rows="3" placeholder="Nhập nội dung góp ý..."></textarea>
   </div>
-
   <div class="text-center mt-4">
     <button id="submitBtn" class="btn btn-outline-secondary px-5" onclick="submitEvaluation()">
       <i class="bi bi-send"></i> Gửi đánh giá
     </button>
   </div>
 </div>
-
 <footer class="fixed-bottom bg-danger text-white text-center py-2 border-top">
   <div class="d-flex align-items-center justify-content-center" style="height: 30px;">
     <marquee behavior="scroll" direction="left" scrollamount="5" style="width: 100%;">
@@ -178,15 +257,13 @@
     </marquee>
   </div>
 </footer>
-
-
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 <script>
   let selectedRating = '';
   let selectedColor = '';
   let unitStaffMap = {};
+  let selectedUnit = '';
 
   function showToast(type, message) {
     Swal.fire({
@@ -200,70 +277,120 @@
     });
   }
 
-  function loadStaffInfo() {
-  const unit = document.getElementById('unitSelect').value;
-  const staffInfo = document.getElementById('staffInfo');
-  const staffName = document.getElementById('staffName');
-  const staffImage = document.getElementById('staffImage');
-  const unitName = document.getElementById('unitName');
+  // Cấu hình phân trang
+  const itemsPerPage = {
+    desktop: 10,
+    tablet: 4,
+    mobile: 1
+  };
+  let currentPage = 1;
+  let itemsToShow = itemsPerPage.desktop;
 
-  if (!unit || !staffData[unit]) {
-    // Ẩn nếu chưa chọn hoặc không có dữ liệu
-    staffInfo.classList.add('d-none');
-    staffName.textContent = '';
-    staffImage.src = '';
-    unitName.textContent = '';
-    return;
+  // Xác định số lượng quầy trên mỗi trang dựa trên kích thước màn hình
+  function updateItemsPerPage() {
+    if (window.innerWidth <= 600) {
+      itemsToShow = itemsPerPage.mobile;
+    } else if (window.innerWidth <= 1024) {
+      itemsToShow = itemsPerPage.tablet;
+    } else {
+      itemsToShow = itemsPerPage.desktop;
+    }
+    renderQuay();
+    renderPagination();
   }
 
-  // Hiện thông tin nhân viên
-  const staff = staffData[unit];
-  staffName.textContent = staff.name;
-  staffImage.src = staff.photo;
-  unitName.textContent = unit; // hoặc dùng tên đầy đủ nếu có: staff.unitName
-  staffInfo.classList.remove('d-none');
-}
+  // Hiển thị danh sách quầy
+  function renderQuay() {
+    const quayGrid = document.getElementById('quayGrid');
+    const quayLoading = document.getElementById('quayLoading');
+    quayGrid.style.display = 'none';
+    quayLoading.classList.add('show'); // Hiện spinner
 
-  function loadUnits() {
-  google.script.run.withSuccessHandler(function(units) {
-    const select = document.getElementById('unitSelect');
-    select.innerHTML = '<option value="">-- Vui lòng chọn --</option>';
-    unitStaffMap = {};
+    // Giả lập thời gian tải để thấy hiệu ứng spinner (thay bằng dữ liệu thực tế)
+    setTimeout(() => {
+      quayGrid.innerHTML = '';
+      const start = (currentPage - 1) * itemsToShow;
+      const end = start + itemsToShow;
+      const paginatedData = Object.entries(unitStaffMap).slice(start, end);
 
-    units.forEach(([unit, staffName, staffPhoto, field]) => {
-      const option = document.createElement('option');
-      option.value = unit;
-      option.text = unit;
-      select.appendChild(option);
+      paginatedData.forEach(([unit, info]) => {
+        const card = document.createElement('div');
+        card.className = 'quay-card';
+        card.innerHTML = `
+          <img src="${info.photo}" alt="${info.name}" class="staff-photo">
+          <div class="staff-name">${info.name}</div>
+          <div class="satisfaction-progress">
+            <div class="progress">
+              <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning" role="progressbar" style="width: ${info.satisfaction || 0}%;" aria-valuenow="${info.satisfaction || 0}" aria-valuemin="0" aria-valuemax="100">${info.satisfaction || 0}%</div>
+            </div>
+          </div>
+          <div class="unit-name">${unit}</div>
+          <div class="staff-field">${info.field || ''}</div>
+        `;
+        card.addEventListener('click', () => {
+          document.querySelectorAll('.quay-card').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+          selectedUnit = unit;
+          selectRating(selectedRating, selectedColor); // Cập nhật lại trạng thái rating nếu cần
+        });
+        quayGrid.appendChild(card);
+      });
 
-      unitStaffMap[unit] = {
-        name: staffName,
-        photo: staffPhoto,
-        field: field
-      };
-    });
+      quayLoading.classList.remove('show'); // Ẩn spinner
+      quayGrid.style.display = 'grid'; // Hiện danh sách quầy
+    }, 500); // Thời gian giả lập 500ms, có thể bỏ khi dùng dữ liệu thực
+  }
 
-    select.addEventListener('change', () => {
-      const selectedUnit = select.value;
-      const info = unitStaffMap[selectedUnit];
+  // Hiển thị phân trang
+  function renderPagination() {
+    const pagination = document.getElementById('pagination');
+    pagination.innerHTML = '';
+    const totalPages = Math.ceil(Object.keys(unitStaffMap).length / itemsToShow);
 
-      if (info) {
-        document.getElementById('staffInfo').style.display = 'flex';
-        document.getElementById('staffName').innerText = info.name;
-        document.getElementById('staffImage').src = info.photo;
-        document.getElementById('staffField').innerText = info.field || '';
-        document.getElementById('unitName').innerText = selectedUnit;
-      } else {
-        document.getElementById('staffInfo').style.display = 'none';
+    // Nút Trang trước
+    const prevButton = document.createElement('button');
+    prevButton.innerHTML = '<i class="bi bi-chevron-left"></i> Trang trước';
+    prevButton.disabled = currentPage === 1;
+    prevButton.addEventListener('click', () => {
+      if (currentPage > 1) {
+        currentPage--;
+        renderQuay();
+        renderPagination();
       }
     });
-  }).getUnitStaffList();
-}
+    pagination.appendChild(prevButton);
 
+    // Nút Trang sau
+    const nextButton = document.createElement('button');
+    nextButton.innerHTML = 'Trang sau <i class="bi bi-chevron-right"></i>';
+    nextButton.disabled = currentPage === totalPages;
+    nextButton.addEventListener('click', () => {
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderQuay();
+        renderPagination();
+      }
+    });
+    pagination.appendChild(nextButton);
+  }
+
+  function loadUnits() {
+    google.script.run.withSuccessHandler(function(units) {
+      unitStaffMap = {};
+      units.forEach(([satisfaction, unit, staffName, staffPhoto, field]) => {
+        unitStaffMap[unit] = {
+          name: staffName,
+          photo: staffPhoto,
+          field: field,
+          satisfaction: satisfaction || 0 // Lượt đánh giá hài lòng (%)
+        };
+      });
+      updateItemsPerPage();
+    }).getUnitStaffList();
+  }
 
   function selectRating(rating, color) {
-    const unit = document.getElementById('unitSelect').value;
-    if (!unit) return showToast('warning', "Vui lòng chọn quầy phục vụ!");
+    if (!selectedUnit) return showToast('warning', "Vui lòng chọn quầy phục vụ!");
 
     selectedRating = rating;
     selectedColor = color;
@@ -278,44 +405,61 @@
     document.getElementById('evaluationTitle').style.color = {
       success: '#28a745', primary: '#007bff', danger: '#dc3545'
     }[color] || '#000';
-    // Đổi màu tên nhân viên theo đánh giá
-  const staffName = document.getElementById('staffName');
-  staffName.classList.remove('text-success', 'text-primary', 'text-danger');
-  if (color === 'success') staffName.classList.add('text-success');
-  else if (color === 'primary') staffName.classList.add('text-primary');
-  else if (color === 'danger') staffName.classList.add('text-danger');
+    const staffName = document.querySelector('.quay-card.selected .staff-name');
+    if (staffName) {
+      staffName.classList.remove('text-success', 'text-primary', 'text-danger');
+      if (color === 'success') staffName.classList.add('text-success');
+      else if (color === 'primary') staffName.classList.add('text-primary');
+      else if (color === 'danger') staffName.classList.add('text-danger');
+    }
+    // Thay đổi màu viền của quầy được chọn
+    const selectedCard = document.querySelector('.quay-card.selected');
+    if (selectedCard) {
+      selectedCard.style.borderColor = {
+        success: '#28a745', // Xanh lá cho Rất hài lòng
+        primary: '#007bff', // Xanh dương cho Hài lòng
+        danger: '#dc3545'   // Đỏ cho Chưa hài lòng
+      }[color] || '#dc3545';
+    }
   }
-  
 
   function submitEvaluation() {
-    const unit = document.getElementById('unitSelect').value;
     const comment = document.getElementById('comment').value;
-    const staff = unitStaffMap[unit] || { name: '', photo: '' };
+    const staff = unitStaffMap[selectedUnit] || { name: '', photo: '' };
 
-    if (!unit) return showToast('error', 'Vui lòng chọn quầy!');
+    if (!selectedUnit) return showToast('error', 'Vui lòng chọn quầy!');
     if (!selectedRating) return showToast('error', 'Vui lòng chọn đánh giá!');
     if (selectedRating === 'Chưa hài lòng' && comment.trim() === '')
       return showToast('error', 'Vui lòng nhập góp ý!');
 
-    google.script.run.withSuccessHandler(() => {
-      Swal.fire({
-      title: 'Thành công!',
-      text: `Cảm ơn bạn đã đánh giá: ${selectedRating}`,
-      icon: 'success',
-      timer: 3000,
-      timerProgressBar: true,
-      showConfirmButton: false
-    });
-      document.getElementById('unitSelect').selectedIndex = 0;
-      document.getElementById('comment').value = '';
-      selectedRating = '';
-      selectedColor = '';
-      document.querySelectorAll('.rating-button').forEach(btn => btn.classList.remove('selected'));
-      document.getElementById('feedbackBox').style.display = 'none';
-      document.getElementById('submitBtn').className = 'btn btn-outline-secondary px-5';
-      document.getElementById('evaluationTitle').style.color = '#000';
-      document.getElementById('staffInfo').style.display = 'none';
-    }).submitFeedback(unit, staff.name, selectedRating, comment);
+    fetch('https://api.ipify.org?format=json')
+      .then(response => response.json())
+      .then(data => {
+        const ipAddress = data.ip;
+        google.script.run.withSuccessHandler(() => {
+          Swal.fire({
+            title: 'Thành công!',
+            text: `Cảm ơn bạn đã đánh giá: ${selectedRating}`,
+            icon: 'success',
+            timer: 3000,
+            timerProgressBar: true,
+            showConfirmButton: false
+          });
+          document.getElementById('comment').value = '';
+          selectedRating = '';
+          selectedColor = '';
+          selectedUnit = '';
+          document.querySelectorAll('.rating-button').forEach(btn => btn.classList.remove('selected'));
+          document.querySelectorAll('.quay-card').forEach(c => c.classList.remove('selected'));
+          document.getElementById('feedbackBox').style.display = 'none';
+          document.getElementById('submitBtn').className = 'btn btn-outline-secondary px-5';
+          document.getElementById('evaluationTitle').style.color = '#000';
+        }).submitFeedback(selectedUnit, staff.name, selectedRating, comment, ipAddress);
+      })
+      .catch(error => {
+        showToast('error', 'Không thể lấy địa chỉ IP');
+        console.error('IP error:', error);
+      });
   }
 
   function loadFooterMessage() {
@@ -328,6 +472,7 @@
     loadUnits();
     loadFooterMessage();
     setInterval(loadFooterMessage, 30000);
+    window.addEventListener('resize', updateItemsPerPage);
   });
 </script>
 </body>
